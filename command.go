@@ -126,12 +126,14 @@ func (c *Command) Subs(subs ...*Command) *Command {
 
 func (c *Command) PrintHelp(err error) {
 	if err != nil {
-		fmt.Println(err.Error(), "\n")
+		fmt.Println(err.Error())
+		fmt.Println()
 	}
 
 	fmt.Printf("Usage: %s [OPTIONS] [COMMAND] [arg...]\n\n", c.Full())
 
-	fmt.Println(c.Desc, "\n")
+	fmt.Println(c.Desc)
+	fmt.Println()
 
 	if c.nOpts > 0 {
 		fmt.Println("Options:")
