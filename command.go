@@ -124,6 +124,45 @@ func (c *Command) Subs(subs ...*Command) *Command {
 	return c
 }
 
+func (c *Command) StringOpt(name string) (string, bool) {
+	opt, ok := c.Opts[name]
+	if !ok {
+		return "", false
+	}
+
+	r, ok := opt.(*string)
+	if !ok {
+		return "", false
+	}
+	return *r, true
+}
+
+func (c *Command) BoolOpt(name string) (bool, bool) {
+	opt, ok := c.Opts[name]
+	if !ok {
+		return false, false
+	}
+
+	r, ok := opt.(*bool)
+	if !ok {
+		return false, false
+	}
+	return *r, true
+}
+
+func (c *Command) IntOpt(name string) (int, bool) {
+	opt, ok := c.Opts[name]
+	if !ok {
+		return 0, false
+	}
+
+	r, ok := opt.(*int)
+	if !ok {
+		return 0, false
+	}
+	return *r, true
+}
+
 func (c *Command) PrintHelp(err error) {
 	if err != nil {
 		fmt.Println(err.Error())
@@ -137,7 +176,7 @@ func (c *Command) PrintHelp(err error) {
 
 	if c.nOpts > 0 {
 		fmt.Println("Options:")
-		c.flags.SetOutput(os.Stderr)
+		c.flags.SetOutput(os.Stdout)
 		c.flags.PrintDefaults()
 		c.flags.SetOutput(ioutil.Discard)
 
@@ -145,7 +184,7 @@ func (c *Command) PrintHelp(err error) {
 	}
 
 	if len(c.subs) > 0 {
-		c.printCommands()
+		c.printCommands(0, false)
 	}
 }
 
@@ -156,8 +195,20 @@ func (c *Command) Full() string {
 	return fmt.Sprintf("%s %s", c.Parent.Full(), c.Name)
 }
 
-func (c *Command) printCommands() {
+func (c *Command) RecursiveHelp() {
+	fmt.Println(c.Desc)
+	fmt.Println()
+
 	fmt.Println("Commands:")
+	if len(c.subs) > 0 {
+		c.printCommands(0, true)
+	}
+}
+
+func (c *Command) printCommands(level int, recurse bool) {
+	if !recurse {
+		fmt.Println("Commands:")
+	}
 	cmds := make([]*Command, len(c.subs))
 	i := 0
 	for _, v := range c.subs {
@@ -175,15 +226,26 @@ func (c *Command) printCommands() {
 
 	for _, v := range cmds {
 		l := len(v.Name)
-		fmt.Printf("    %s", v.Name)
+		for i := 0; i < level; i++ {
+			fmt.Print("  ")
+		}
+		fmt.Printf("  %s", v.Name)
 		for i := 0; i < (max-l)+3; i++ {
 			fmt.Print(" ")
 		}
 		fmt.Printf("%s\n", v.Desc)
+		if recurse && len(c.subs) > 0 {
+			v.printCommands(level+1, true)
+		}
 	}
 }
 
 func HelpOnly(cmd *Command) error {
 	cmd.PrintHelp(nil)
+	return nil
+}
+
+func RecursiveHelp(cmd *Command) error {
+	cmd.RecursiveHelp()
 	return nil
 }
