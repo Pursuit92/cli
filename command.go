@@ -184,7 +184,7 @@ func (c *Command) PrintHelp(err error) {
 	}
 
 	if len(c.subs) > 0 {
-		c.printCommands(0, false)
+		c.printCommands(0, false, 0)
 	}
 }
 
@@ -201,11 +201,35 @@ func (c *Command) RecursiveHelp() {
 
 	fmt.Println("Commands:")
 	if len(c.subs) > 0 {
-		c.printCommands(0, true)
+		c.printCommands(0, true, 0)
 	}
 }
 
-func (c *Command) printCommands(level int, recurse bool) {
+func (c *Command) depth(rec bool, level int) int {
+	cmds := make([]*Command, len(c.subs))
+	i := 0
+	for _, v := range c.subs {
+		cmds[i] = v
+		i++
+	}
+	max := 0
+	for _, v := range cmds {
+		var subMax int
+		if rec {
+			subMax = v.depth(true, level+1)
+			if subMax > max {
+				max = subMax
+			}
+		}
+		l := len(v.Name) + level*2
+		if l > max {
+			max = l
+		}
+	}
+	return max
+}
+
+func (c *Command) printCommands(level int, recurse bool, max int) {
 	if !recurse {
 		fmt.Println("Commands:")
 	}
@@ -216,26 +240,21 @@ func (c *Command) printCommands(level int, recurse bool) {
 		i++
 	}
 	sort.Sort(byName(cmds))
-	max := 0
-	for _, v := range cmds {
-		l := len(v.Name)
-		if l > max {
-			max = l
-		}
+	if max == 0 {
+		max = c.depth(recurse, level)
 	}
-
 	for _, v := range cmds {
 		l := len(v.Name)
 		for i := 0; i < level; i++ {
 			fmt.Print("  ")
 		}
 		fmt.Printf("  %s", v.Name)
-		for i := 0; i < (max-l)+3; i++ {
+		for i := 0; i < (max-l)+3-level*2; i++ {
 			fmt.Print(" ")
 		}
 		fmt.Printf("%s\n", v.Desc)
 		if recurse && len(c.subs) > 0 {
-			v.printCommands(level+1, true)
+			v.printCommands(level+1, true, max)
 		}
 	}
 }
